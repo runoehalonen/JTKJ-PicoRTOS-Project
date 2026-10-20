@@ -1,7 +1,11 @@
 
 #include <time.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include "pico/stdlib.h"
+#include "pico/cyw43_arch.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include <stdlib.h>
 
 #include "pico/stdlib.h"
 #include "pico/stdio.h"
@@ -11,6 +15,11 @@
 #define TEMP_MAX        40
 #define LUX_MIN         100
 #define LUX_MAX         1500
+#define BUFFER_SIZE     64
+
+#ifndef LED_DELAY_MS
+#define LED_DELAY_MS 1000
+#endif
 
 static volatile int temp; 
 static volatile int lux;
@@ -55,7 +64,7 @@ static void sensorTask (void *arg){
         temp = rand_in_range(TEMP_MIN, TEMP_MAX);
         lux  = rand_in_range(LUX_MIN,  LUX_MAX);
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(LED_DELAY_MS));
     }
 }
 
@@ -83,7 +92,7 @@ static void printTask(void *arg) {
     while (1) {
         TickType_t ticks = xTaskGetTickCount();
         uint32_t ms = ticks * portTICK_PERIOD_MS;
-        sprintf(buf,"time:%d,temp:%d,lux:%d\n",(unsigned long)ms,temp,lux);
+        sprintf(buf,"temp:%d,lux:%d\n",temp,lux);
         stdio_puts(buf);
 
         vTaskDelay(pdMS_TO_TICKS(1500));
@@ -101,8 +110,8 @@ int main (void) {
     TaskHandle_t myPrintHandle = NULL;
 
     // Create tasks
-    xTaskCreate(printingTask, "print", 1024, NULL, 3, &myPrintHandle);
+    xTaskCreate(printTask, "print", 1024, NULL, 3, &myPrintHandle);
     xTaskCreate(sensorTask, "usb", 1024, NULL, 2, &mySensorHandle);
 
     vTaskStartScheduler();
-
+}
